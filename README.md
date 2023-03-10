@@ -1,4 +1,4 @@
-## Identifying peer effects on academic achievements through students
+## Identifying peer effects on academic achievements through students' effort
 This is a replication code of "Identifying peer effects on academic achievements through students" by Aristide Houndetoungan and Cristelle Kouame.
 
 - Files `SourceR.R` and `SourceCpp.cpp` contain functions built in **R** and **cpp** to be used in other files.
