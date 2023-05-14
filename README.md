@@ -1,5 +1,5 @@
-## Identifying peer effects on academic achievement through students' effort
-This is a replication code of "Identifying peer effects on academic achievements through students" by Aristide Houndetoungan and Cristelle Kouame.
+## Identifying Peer Effects on Student Academic Effort
+This is a replication code of "Identifying Peer Effects on Student Academic Effort" by Aristide Houndetoungan and Cristelle Kouame.
 
 - Files `SourceR.R` and `SourceCpp.cpp` contain functions built in **R** and **cpp** to be used in other files.
 - `0_Inschool.do` extracts the part of the data set to be used from the Add Health data set.
