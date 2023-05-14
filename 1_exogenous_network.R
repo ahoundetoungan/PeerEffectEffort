@@ -153,6 +153,88 @@ saveRDS(va.iv.FE2, file = "_output/va.iv.FE2.RDS")
 va.iv.FE2    <- readRDS(file = "_output/va.iv.FE2.RDS")
 write.csv(va.iv.FE2$output, file = "_output/va.iv.FE2.csv")
 
+## IV estimation with fixed effects removing completely isolated students
+rm(list = ls())
+Rcpp::sourceCpp("codefiles/SourceCpp.cpp")
+source("codefiles/SourceR.R")
+load(file = "AHD.rda")
+rm("Xlogit")
+gc()
+
+mydata        <- mydata %>% mutate(cst = 1) 
+va.names.cst  <- c("cst", va.names)
+va.exo        <- va.names[-length(va.names)]
+va.exo.cst    <- c("cst", va.exo)
+
+### We remove completely isolated students
+nhafr         <- lapply(G, rowSums) # number of friends
+nisfr         <- lapply(G, colSums) # number of times the student is a friend
+keep          <- lapply(1:nsch, function(x) (nhafr[[x]] > 0) | (nisfr[[x]] > 0)) #
+mydata        <- mydata %>% filter(unlist(keep)) %>% group_by(sschlcde) %>% mutate(nstudent = n()) %>% ungroup() %>% filter(nstudent > 2)
+G             <- norm.network(lapply(1:nsch, function(x) G[[x]][keep[[x]], keep[[x]]]))
+Gnrow         <- sapply(G, nrow); G <- G[Gnrow > 2] # We remove school with completely isolated students
+nsch          <- length(G)
+sch.size      <- Gnrow[Gnrow > 2]
+
+### Data
+GXY           <- peer.avg(G, mydata[,va.names]); colnames(GXY) <- paste0("G_", va.names)
+GGX           <- peer.avg(G, GXY[,-ncol(GXY)]); colnames(GGX) <- paste0("G", colnames(GXY[,-ncol(GXY)]))
+hasfriends    <- unlist(lapply(G, rowSums))
+Ghasfriends   <- peer.avg(G, hasfriends)
+J1            <- lapply(1:nsch, function(x) diag(sch.size[x]) - matrix(1, sch.size[x], sch.size[x])/sch.size[x])
+J2            <- lapply(1:nsch, function(x) {
+  onehat      <- rowSums(G[[x]])
+  onecheck    <- 1 - onehat
+  sonehat     <- sum(onehat); sonehat     <- ifelse(sonehat == 0, 1, sonehat)
+  sonecheck   <- sum(onecheck); sonecheck <-  ifelse(sonecheck == 0, 1, sonecheck)
+  diag(sch.size[x]) - onehat %*% t(onehat)/sonehat - onecheck %*% t(onecheck)/sonecheck
+})
+F1            <- fdataFs(J1)
+F2            <- fdataFs(J2)
+
+F1XY          <- peer.avg(F1, mydata[,va.names]); colnames(F1XY) <- paste0("F1_", va.names)
+F2XY          <- peer.avg(F2, mydata[,va.names]); colnames(F2XY) <- paste0("F2_", va.names)
+F1GXY         <- peer.avg(F1, GXY); colnames(F1GXY) <- paste0("F1", colnames(GXY))
+F2GXY         <- peer.avg(F2, GXY); colnames(F2GXY) <- paste0("F2", colnames(GXY))
+F1GGX         <- peer.avg(F1, GGX); colnames(F1GGX) <- paste0("F1", colnames(GGX))
+F2GGX         <- peer.avg(F2, GGX); colnames(F2GGX) <- paste0("F2", colnames(GGX))
+mydata        <- cbind(mydata, GXY, GGX, "hasfriends" = hasfriends, "G_hasfriends" = Ghasfriends)
+mydataFE1     <- data.frame(F1XY, F1GXY, F1GGX)
+mydataFE2     <- data.frame(F2XY, F2GXY, F2GGX)
+
+rm(list = c("GXY", "GGX", "hasfriends", "Ghasfriends", "F1XY", "F2XY", "F1GXY", "F2GXY", "F1GGX", "F2GGX", "J1", "J2"))
+gc()
+
+### Formula and instruments
+form.FE1      <- as.formula(paste("F1_gpa ~", paste(c(-1, paste0("F1_", va.exo), paste0("F1G_", va.exo)), collapse = "+"), "+ F1G_gpa"))
+instr.FE1     <- as.formula(paste("~", paste(c(-1, paste0("F1_", va.exo), paste0("F1G_", va.exo), paste0("F1GG_", va.exo)), collapse = "+")))
+form.FE2      <- as.formula(paste("F2_gpa ~", paste(c(-1, paste0("F2_", va.exo), paste0("F2G_", va.exo)), collapse = "+"), "+ F2G_gpa"))
+instr.FE2     <- as.formula(paste("~", paste(c(-1, paste0("F2_", va.exo), paste0("F2G_", va.exo), paste0("F2GG_", va.exo)), collapse = "+")))
+
+### Estimation
+iviso.FE1     <- ivreg(formula = form.FE1, instruments = instr.FE1, data = mydataFE1)
+(siviso.FE1   <- summary(iviso.FE1, diagnostics = TRUE, vcov = vcovCL, cluster = unlist(lapply(1:length(F1), function(x) rep(x, nrow(F1[[x]]))))))
+saveRDS(siviso.FE1, file = "_output/siviso.FE1.RDS")
+siv.FE1       <- readRDS(file = "_output/siviso.FE1.RDS")
+write.csv(siv.FE1$coefficients, file = "_output/siviso.FE1.csv")
+
+iviso.FE2     <- ivreg(formula = form.FE2, instruments = instr.FE2, data = mydataFE2)
+(siviso.FE2   <- summary(iviso.FE2, diagnostics = TRUE, vcov = vcovCL, cluster = unlist(lapply(1:length(F2), function(x) rep(x, nrow(F2[[x]]))))))
+saveRDS(iviso.FE2, file = "_output/iviso.FE2.RDS")
+iviso.FE2     <- readRDS(file = "_output/iviso.FE2.RDS")
+ml.iviso.FE2  <- foptim(iviso.FE2$residuals, iviso.FE2$coefficients["F2G_gpa"], 
+                       G, fixed.effects = TRUE, F2, start = c(1, 0))
+va.iviso.FE2  <- fvariance.iv(iviso.FE2, ml.iviso.FE2)  
+va.iviso.FE2$output
+va.iviso.FE2$sargan.stat
+va.iviso.FE2$sargan.pvalue
+va.iviso.FE2$sigma2eta
+va.iviso.FE2$sigma2epsilon
+va.iviso.FE2$rho
+saveRDS(va.iviso.FE2, file = "_output/va.iviso.FE2.RDS")
+va.iviso.FE2 <- readRDS(file = "_output/va.iviso.FE2.RDS")
+write.csv(va.iviso.FE2$output, file = "_output/va.iviso.FE2.csv")
+
 # ## Optimal GMM
 # ### estimation of the fixed effects and E(Gy)
 # EGy1         <- fEGy.iv(mydata, va.names, siv.FE1$coefficients[,"Estimate"], G, type = 1)

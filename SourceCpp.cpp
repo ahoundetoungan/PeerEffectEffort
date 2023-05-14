@@ -113,7 +113,7 @@ List ftoolsml(const arma::vec& resids,
     Ws           = Ws*Fs.t();
     n1           = n2 + 1;
     n2           = n1 + Fs.n_rows - 1;
-    // cout<<n2<<endl;
+    //cout<<n2<<endl;
     es           = resids.subvec(n1, n2);
     n(s)         = nss;
     I[s]         = Is;
