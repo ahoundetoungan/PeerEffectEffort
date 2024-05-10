@@ -43,15 +43,17 @@ foptim <- function(resids,
 }
 
 
-fvariance.ols  <- function(ols.est, ml.est){
+fvariance.ols  <- function(ols.est, ml.est, dvar){
   mod          <- ols.est$model
   coef         <- ols.est$coefficients
   rem          <- names(coef)[which(is.na(coef))]
   coef         <- coef[!(names(coef) %in% rem)]
   mod          <- mod[, !(colnames(mod) %in% rem), drop = FALSE]
   K            <- length(coef)
-  X            <- as.matrix(mod[,2:K])
-  R            <- as.matrix(cbind(X, "G_gpa" = mod[,ifelse("G_gpa" %in% colnames(mod), "G_gpa", "F2G_gpa")]))
+  X            <- as.matrix(mod[,3:(K + 1)])
+  R            <- as.matrix(cbind("Gy" = mod[,ifelse(paste0("G_", dvar) %in% colnames(mod), paste0("G_", dvar), 
+                                                     ifelse(paste0("F1G_", dvar) %in% colnames(mod), paste0("F1G_", dvar), paste0("F3G_", dvar)))],
+                                  X))
   Om           <- ml.est$Omega
   B0           <- crossprod(R)
   D0           <- crossprod(R, PartialNetwork::peer.avg(Om, R))
@@ -61,15 +63,17 @@ fvariance.ols  <- function(ols.est, ml.est){
 }
 
 
-fvariance.iv   <- function(iv.est, ml.est){
+fvariance.iv   <- function(iv.est, ml.est, dvar){
   mod          <- iv.est$model
   coef         <- iv.est$coefficients
   rem          <- names(coef)[which(is.na(coef))]
   coef         <- coef[!(names(coef) %in% rem)]
   mod          <- mod[, !(colnames(mod) %in% rem), drop = FALSE]
   K            <- length(coef)
-  X            <- as.matrix(mod[,2:K])
-  R            <- as.matrix(cbind(X, "G_gpa" = mod[, ifelse("G_gpa" %in% colnames(mod), "G_gpa", "F2G_gpa")]))
+  X            <- as.matrix(mod[,3:(K + 1)])
+  R            <- as.matrix(cbind("Gy" = mod[,ifelse(paste0("G_", dvar) %in% colnames(mod), paste0("G_", dvar), 
+                                                     ifelse(paste0("F1G_", dvar) %in% colnames(mod), paste0("F1G_", dvar), paste0("F3G_", dvar)))],
+                                  X))
   Z            <- as.matrix(cbind(X, mod[, (K + 2):ncol(mod)]))
   Kz           <- ncol(Z)
   RZ           <- crossprod(R, Z)
@@ -82,8 +86,7 @@ fvariance.iv   <- function(iv.est, ml.est){
   Omch         <- matrix(0, Kz, Kz)
   for(s in 1:S){
     cat("Compute check(Omega) -- group: ", s, "/", S, "\n")
-    Zs         <- as.matrix(mod[(cumn[s] + 1):cumn[s + 1], 2:K])
-    Zs         <- as.matrix(cbind(Zs, mod[(cumn[s] + 1):cumn[s + 1], (K + 2):ncol(mod)]))
+    Zs         <- Z[(cumn[s] + 1):cumn[s + 1], , drop = FALSE]
     Omch       <- Omch + crossprod(Zs, ml.est$Omega[[s]] %*% Zs)
   }
   

@@ -19,9 +19,9 @@ import sasxport "sfriend.xpt"
 destring sqid, replace
 sort sqid
 drop if sqid == 999999
-merge 1:1 sqid using ~/tmpah/cleandta
+merge 1:1 sqid using cleandta
 drop _merge
-save ~/tmpah/cleandta, replace
+save cleandta, replace
 
 drop if aid == .
 // Age 
@@ -51,7 +51,22 @@ gen bornUSA = s8
 // Year in school
 replace s9 = . if s9 == 99
 gen yearinschl = s9
+
 // GPA
+// English/Language Arts s10a
+// Mathematics s10b
+// History/Social Studies s10c
+// Science s10d
+gen gpa_eng = s10a if s10a <= 4
+gen gpa_mat = s10b if s10b <= 4
+gen gpa_his = s10c if s10c <= 4
+gen gpa_sci = s10d if s10d <= 4
+
+label variable gpa_eng "GPA in English/Language Arts"
+label variable gpa_mat "GPA in Mathematics"
+label variable gpa_his "GPA in History/Social Studies"
+label variable gpa_sci "GPA in Science"
+
 gen nsubject = (s10a < 5) + (s10b < 5) + (s10c < 5) + (s10d < 5) 
 replace s10a = 0 if s10a > 4
 replace s10b = 0 if s10b > 4
@@ -61,6 +76,7 @@ egen gpa = rowtotal(s10a-s10d)
 replace gpa = 5 - gpa/nsubject
 replace gpa =. if nsubject == 0
 drop nsubject
+
 // Live with mother
 replace s11 = . if s11 == 9
 gen withmom = s11
@@ -113,6 +129,6 @@ drop s1* s2* s3* s4* s5* s6* s9*
 
 //keep if inlist(sschlcde,4, 175, 90, 45, 24, 79, 145, 162, 34, 62, 158, 75, 65, 267, 93, 59, 369, 73, 47, 259, 269, 29, 147, 83, 87, 186, 27, 106, 58, 86, 12, 187, 57, 18, 71, 72, 31, 121, 194, 42, 43, 115, 60, 193, 19, 268, 183, 13, 16, 105, 53, 23, 41, 6, 271, 14, 9, 2, 76, 22, 171, 74, 20, 168, 191, 78, 141, 50, 114, 82, 170, 160, 66, 35, 89, 91, 371, 7, 33, 52, 77, 67, 54, 21, 119, 68, 64, 120, 15, 176) // keep only schools where >=90% of the students have grades
 
-save ~/tmpah/cleandta, replace
+save cleandta, replace
 
 

@@ -47,8 +47,8 @@ double floglike(const arma::vec& x,
                 const int& S){
   double tau      = exp(x(0));
   double rho      = (exp(x(1)) - 1)/(exp(x(1)) + 1);
-  Rprintf("tau: %f\n", tau);
-  Rprintf("rho: %f\n", rho);
+  //Rprintf("tau: %f\n", tau);
+  //Rprintf("rho: %f\n", rho);
 
   double sig2eps, llh(0), val, sign;
   List lOm;
@@ -60,14 +60,14 @@ double floglike(const arma::vec& x,
     lOm           = tmp3;}
   
 
-  Rprintf("sigma^2_epsilon: %f\n", sig2eps);
+  //Rprintf("sigma^2_epsilon: %f\n", sig2eps);
   for(int s(0); s < S; ++ s){
     arma::mat Om  = lOm[s];
     log_det(val, sign, Om); 
     llh          += (-0.5*nst(s)*(log(sig2eps) + 1) - 0.5*(val + log(sign)));
   }
-  Rprintf("log(likelihood): %f\n", llh);
-  Rprintf("*****************\n");
+  //Rprintf("log(likelihood): %f\n", llh);
+  //Rprintf("*****************\n");
   return -llh;
 }
 
@@ -79,7 +79,7 @@ List fdataFs(List& J){
   arma::mat eigvec;
   List F(S);
   for(int s(0); s < S; ++ s){
-    Rprintf("Find Eigenvalues and Eigenvectors: %i/%i\n", s + 1, S);
+    //Rprintf("Find Eigenvalues and Eigenvectors: %i/%i\n", s + 1, S);
     arma::mat Js = J[s];
     arma::eig_sym(eigval, eigvec, Js, "std");
     ind          = arma::find(eigval > 0.999);

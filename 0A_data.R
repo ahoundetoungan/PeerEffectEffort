@@ -1,5 +1,5 @@
-#' Identifying peer effects on academic achievements through students’ effort
-#' Elysée Aristide Houndetoungan and Cristelle Kouame
+#' Identifying Peer Effects with Unobserved Effort and Isolated Students
+#' Aristide Houndetoungan, Cristelle Kouame, and Michael Vlassopoulos
 #' 
 #' This file prepares the data set to be used.
 #' The data set will be saved under the name "AHD.rda" and will be used in other files.
@@ -16,14 +16,16 @@ root  <- sapply(proot, dir.exists)
 root  <- proot[root][1]
 setwd(root)
 
+
 # the finale data set is save in the 'filname' path and can be loaded if saved before
 # otherwise, the code will be ran to prepare the data
-filname        <- "AHD.rda"  
+vdep           <- "gpa"
+filname        <- paste0("../../../Data/AHdata/PEEffort/AHD", vdep, ".rda") 
 if (file.exists(filname)) {
   load(file = filname)
 } else {
   # Data
-  mydata       <- read.dta13("cleandta.dta")  # data from Stata
+  mydata       <- read.dta13("../../../Data/AHdata/cleandta.dta")  # data from Stata
   mydata       <- mydata[order(mydata$sschlcde),] 
   mydata$club  <- ifelse(mydata$nclubs > 0, 1, 0)
   mydata$male  <- 1 - mydata$female
@@ -43,12 +45,12 @@ if (file.exists(filname)) {
   # list of variable (excluding reference variables)
   va.all.names   <- c("male", "female", "age", "hispanic", "racewhite", "raceblack", "raceasian", "raceother", 
                       "withbothpar", "yearinschl", "club", "mehigh", "melhigh", "memhigh", "memiss", "mjprof", 
-                      "mjhome", "mjother", "mjmiss", "gpa")
+                      "mjhome", "mjother", "mjmiss", vdep)
   
   # list of variable (excluding reference variables for identification)
   va.names      <- c("female", "age", "hispanic", "raceblack", "raceasian", "raceother", 
                      "withbothpar", "yearinschl", "club", "melhigh", "memhigh", "memiss", "mjprof", 
-                     "mjother", "mjmiss", "gpa")
+                     "mjother", "mjmiss", vdep)
   
   # remove friend from different groups
   # remove self friendship
@@ -198,7 +200,9 @@ gc()
 # Descriptive statistic function 
 library(dplyr)
 my.stat.des    <- function(x) {
-  out <- c(mean(x), sd(x), quantile(x, probs = c(0.005, 0.995, 0.025, 0.975, 0.05, 0.95, 0.25, 0.75)))
+  out <- c(mean(x, na.rm = TRUE), 
+           sd(x, na.rm = TRUE), 
+           quantile(x, probs = c(0.005, 0.995, 0.025, 0.975, 0.05, 0.95, 0.25, 0.75), na.rm = TRUE))
   names(out)   <- c("Mean", "St. Dev.",   "Pctl(0.5)",   "Pctl(99.5)",   "Pctl(2.5)",   "Pctl(97.5)",   "Pctl(5)",   "Pctl(95)",   "Pctl(25)",   "Pctl(75)")
   out
 }
@@ -217,13 +221,16 @@ summary(sapply(G, nrow))
 # 18.0   216.0     368.0   485.3   605.0    2027.0
 
 # all the variables 
-allVar         <- cbind(mydata[,va.all.names], peer.avg(norm.network(G), mydata[,va.all.names]))
+hnFr           <- which(unlist(lapply(G, rowSums)) == 0)
+allVar         <- peer.avg(norm.network(G), mydata[,va.all.names])
+allVar[hnFr,]  <- NA
+allVar         <- cbind(mydata[,va.all.names], allVar)
 
 # Descriptive stat
 sdes           <- round(t(apply(allVar, 2, my.stat.des)), 3)[,c(1,2,9,10)]
 sdes
 print(sdes)
-write.csv(sdes, file = "_output/sdes.csv")
+write.csv(sdes, file = paste0("_output/sdes", vdep, ".csv"))
 
 # friends
 cumsum         <- c(0, cumsum(sch.size))
@@ -239,7 +246,7 @@ Friends        <- data.frame(gender      = ifelse(mydata$male == 1, "male", "fem
                              hasfrfemale = nhafrfemale)
 (sumFriends    <- Friends %>% group_by(gender) %>% summarise(across(c("hasfr", "hasfrmale", "hasfrfemale"), mean)) %>% bind_rows(
   Friends %>% summarise(across(c("hasfr", "hasfrmale", "hasfrfemale"), mean))))
-write.csv(sumFriends, file = "_output/FriendsByGender.csv")
+write.csv(sumFriends, file = paste0("_output/FriendsByGender", vdep, ".csv"))
 # gender   nfr  nffr  nmfr
 # <chr>  <dbl> <dbl> <dbl>
 # female  3.64  2.28  1.36
@@ -250,7 +257,7 @@ write.csv(sumFriends, file = "_output/FriendsByGender.csv")
 sdes.nofriends <- round(t(apply(allVar[nhafr == 0,], 2, my.stat.des)), 3)[,c(1,2,9,10)]
 sdes.nofriends
 print(sdes.nofriends)
-write.csv(sdes.nofriends, file = "_output/sdes.nofriends.csv")
+write.csv(sdes.nofriends, file = paste0("_output/sdes.nofriends", vdep, ".csv"))
 
 # distribution of number of friends
 disthasfr      <- Friends %>% group_by(hasfr) %>% summarise(count = length(hasfr))
@@ -267,7 +274,7 @@ print(as.data.frame(disthasfr), row.names = FALSE)
 # 8  3657
 # 9  2185
 # 10   690
-write.csv(disthasfr, file = "_output/distHasFriends.csv")
+write.csv(disthasfr, file = paste0("_output/distHasFriends", vdep, ".csv"))
 
 # distribution of the number of times the student is a friends
 distisfr        <- Friends %>% group_by(isfr) %>% summarise(count = length(isfr))
@@ -303,7 +310,7 @@ print(as.data.frame(distisfr), row.names = FALSE)
 # 28     1
 # 29     1
 # 35     1
-write.csv(distisfr, file = "_output/distIsFriends.csv")
+write.csv(distisfr, file = paste0("_output/distIsFriends", vdep, ".csv"))
 
 (tabFriends     <- table(Friends$isfr, Friends$hasfr))
 # 0    1    2    3    4    5    6    7    8    9   10
@@ -337,7 +344,7 @@ write.csv(distisfr, file = "_output/distIsFriends.csv")
 # 28    0    0    0    0    0    1    0    0    0    0    0
 # 29    0    0    0    0    0    0    0    1    0    0    0
 # 35    0    0    0    0    0    0    1    0    0    0    0
-write.csv(tabFriends, file = "_output/tabFriends.csv")
+write.csv(tabFriends, file = paste0("_output/tabFriends", vdep, ".csv"))
 
 ggplot(data = data.frame(nfriends = factor(nhafr)), aes(x = nfriends)) +
   geom_bar(aes(y = (..count..)/sum(..count..)), color = "black", fill = "#eeeeee") + 
