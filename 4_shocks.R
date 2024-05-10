@@ -1,10 +1,10 @@
 # #' Identifying Peer Effects with Unobserved Effort and Isolated Students
 #' Aristide Houndetoungan, Cristelle Kouame, and Michael Vlassopoulos
-#' 
-#' This file simulate schocks on GPA
+#'
+#' This file simulates schocks to GPA
 # set dvar
 dvar  <- "gpa"
-rm(list = ls()[ls() != "dvar"]) 
+rm(list = ls()[ls() != "dvar"])
 library(PartialNetwork)
 library(AER)
 library(dplyr)
@@ -75,17 +75,17 @@ dplot   <- data.frame(endo  = rep(0:1, each = 4*sum(nvec)),
 
 shockn  <- c(expression(paste("Model 4: Shock on ", c[s])),
              expression(paste("Model 4: Shock on ", alpha[s])),
-             expression(paste("Model 3: Shock on ", c[s])), 
+             expression(paste("Model 3: Shock on ", c[s])),
              expression(paste("Model 2: Shock on ", c[s])))
 
 (graph  <- ggplot(dplot %>% filter(endo == "Exogenous network"), aes(y = shock, x = dy, group = shock)) +
     geom_boxplot(outlier.shape = 1) +
-    geom_point(aes(y = shock, x = dy1, group = shock), shape = 1) + 
+    geom_point(aes(y = shock, x = dy1, group = shock), shape = 1) +
     ylab("") + xlab("GPA increase") + theme_bw() +
-    # facet_wrap(~ endo, ncol = 2) + 
-    scale_y_discrete(labels = shockn) + 
-    scale_x_continuous(breaks = 1:7) + 
-    theme(strip.text = element_text(face = "italic"), 
+    # facet_wrap(~ endo, ncol = 2) +
+    scale_y_discrete(labels = shockn) +
+    scale_x_continuous(breaks = 1:7) +
+    theme(strip.text = element_text(face = "italic"),
           text = element_text(size = 12, family = "Palatino"),
           axis.title = element_text(size = 12, family = "Palatino")))
 
